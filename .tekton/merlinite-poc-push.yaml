@@ -16,8 +16,8 @@ metadata:
   namespace: rhel-ai-poc-tenant
 spec:
   params:
-    - name: dockerfile
-      value: Containerfile
+    - name: oci_copy_file
+      value: oci.yaml
     - name: git-url
       value: '{{source_url}}'
     - name: output-image
@@ -37,7 +37,7 @@ spec:
             - ReadWriteOnce
           resources:
             requests:
-              storage: 1Gi
+              storage: 20Gi
         status: {}
     - name: git-auth
       secret:
