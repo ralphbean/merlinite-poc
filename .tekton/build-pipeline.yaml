@@ -214,17 +214,19 @@ spec:
                 source=$(echo $entry | yq .source)
                 filename=$(echo $entry | yq .filename)
                 artifact_type=$(echo $entry | yq .type)
+                artifact_digest=$(echo $entry | yq .sha256sum)
 
                 echo "declare OCI_SOURCE=${source}" > /var/workdir/vars/$filename
                 echo "declare OCI_FILENAME=${filename}" >> /var/workdir/vars/$filename
                 echo "declare OCI_ARTIFACT_TYPE=${artifact_type}" >> /var/workdir/vars/$filename
+                echo "declare OCI_ARTIFACT_DIGEST=${artifact_digest}" >> /var/workdir/vars/$filename
 
                 echo "Wrote /var/workdir/vars/$filename with contents:"
                 cat /var/workdir/vars/$filename
               done
             workingDir: $(workspaces.source.path)
           - name: oci-copy
-            image: quay.io/containers/buildah:v1.35@sha256:fd6966a137e485fd887498ec7625df4392514a37d78b3020f6309fe5a2e75992
+            image: quay.io/containers/buildah:v1.35.4@sha256:f07da1c4c59290dd7ff8c521f5d8f3b0f24985ae933da7381fd5a2c96f887423
 
             computeResources:
               limits:
@@ -249,6 +251,9 @@ spec:
                 echo "Downloading $OCI_SOURCE to $OCI_FILENAME"
                 curl --silent --show-error --location $OCI_SOURCE -o $OCI_FILENAME
 
+                echo "Confirming that digest of $OCI_FILENAME matches expected $OCI_ARTIFACT_DIGEST"
+                echo "$OCI_ARTIFACT_DIGEST $OCI_FILENAME" | sha256sum --check
+
                 echo "Building manifest of type $OCI_ARTIFACT_TYPE from $OCI_FILENAME"
                 buildah manifest add $IMAGE --artifact --artifact-type $OCI_ARTIFACT_TYPE $OCI_FILENAME
               done
@@ -269,16 +274,24 @@ spec:
           - image: quay.io/konflux-ci/yq:latest@sha256:974dea6375ee9df561ffd3baf994db2b61777a71f3bcf0050c5dca91ac9b3430
             name: sbom-generate
             script: |
-              yq -o json e -n '.components = []' > sbom-cyclonedx.json
+              cat >sbom-cyclonedx.json <<EOL
+              {
+                  "\$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.5",
+                  "version": 1,
+                  "components": []
+              }
+              EOL
 
               for varfile in /var/workdir/vars/*; do
                 echo "Reading $varfile"
                 source $varfile
 
-                purl="pkg:generic/${OCI_FILENAME}?download_url=${OCI_SOURCE}"
+                purl="pkg:generic/${OCI_FILENAME}?download_url=${OCI_SOURCE}&checksum=sha256:${OCI_ARTIFACT_DIGEST}"
 
                 echo "Recording purl $purl"
-                yq -oj -i '.components += [ {"purl": "'$purl'"} ]' sbom-cyclonedx.json
+                yq -oj -i '.components += [ {"purl": "'$purl'", "type": "file", "name": "'$OCI_FILENAME'"} ]' sbom-cyclonedx.json
               done
             workingDir: $(workspaces.source.path)
           - name: upload-sbom
