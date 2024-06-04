@@ -224,7 +224,7 @@ spec:
               done
             workingDir: $(workspaces.source.path)
           - name: oci-copy
-            image: quay.io/containers/buildah:v1.35@sha256:fd6966a137e485fd887498ec7625df4392514a37d78b3020f6309fe5a2e75992
+            image: quay.io/containers/buildah:v1.35.4@sha256:f07da1c4c59290dd7ff8c521f5d8f3b0f24985ae933da7381fd5a2c96f887423
 
             computeResources:
               limits:
