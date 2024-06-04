@@ -276,7 +276,7 @@ spec:
             script: |
               cat >sbom-cyclonedx.json <<EOL
               {
-                  "$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
+                  "\$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
                   "bomFormat": "CycloneDX",
                   "specVersion": "1.5",
                   "version": 1,
@@ -291,7 +291,7 @@ spec:
                 purl="pkg:generic/${OCI_FILENAME}?download_url=${OCI_SOURCE}&checksum=sha256:${OCI_ARTIFACT_DIGEST}"
 
                 echo "Recording purl $purl"
-                yq -oj -i '.components += [ {"purl": "'$purl'"} ]' sbom-cyclonedx.json
+                yq -oj -i '.components += [ {"purl": "'$purl'", "type": "file", "name": "'$OCI_FILENAME'"} ]' sbom-cyclonedx.json
               done
             workingDir: $(workspaces.source.path)
           - name: upload-sbom
