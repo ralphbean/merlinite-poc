@@ -214,10 +214,12 @@ spec:
                 source=$(echo $entry | yq .source)
                 filename=$(echo $entry | yq .filename)
                 artifact_type=$(echo $entry | yq .type)
+                artifact_digest=$(echo $entry | yq .sha256sum)
 
                 echo "declare OCI_SOURCE=${source}" > /var/workdir/vars/$filename
                 echo "declare OCI_FILENAME=${filename}" >> /var/workdir/vars/$filename
                 echo "declare OCI_ARTIFACT_TYPE=${artifact_type}" >> /var/workdir/vars/$filename
+                echo "declare OCI_ARTIFACT_DIGEST=${artifact_digest}" >> /var/workdir/vars/$filename
 
                 echo "Wrote /var/workdir/vars/$filename with contents:"
                 cat /var/workdir/vars/$filename
@@ -249,6 +251,9 @@ spec:
                 echo "Downloading $OCI_SOURCE to $OCI_FILENAME"
                 curl --silent --show-error --location $OCI_SOURCE -o $OCI_FILENAME
 
+                echo "Confirming that digest of $OCI_FILENAME matches expected $OCI_ARTIFACT_DIGEST"
+                echo "$OCI_ARTIFACT_DIGEST $OCI_FILENAME" | sha256sum --check
+
                 echo "Building manifest of type $OCI_ARTIFACT_TYPE from $OCI_FILENAME"
                 buildah manifest add $IMAGE --artifact --artifact-type $OCI_ARTIFACT_TYPE $OCI_FILENAME
               done
@@ -275,7 +280,7 @@ spec:
                 echo "Reading $varfile"
                 source $varfile
 
-                purl="pkg:generic/${OCI_FILENAME}?download_url=${OCI_SOURCE}"
+                purl="pkg:generic/${OCI_FILENAME}?download_url=${OCI_SOURCE}&checksum=sha256:${OCI_ARTIFACT_DIGEST}"
 
                 echo "Recording purl $purl"
                 yq -oj -i '.components += [ {"purl": "'$purl'"} ]' sbom-cyclonedx.json
