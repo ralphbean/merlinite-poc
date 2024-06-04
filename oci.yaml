@@ -1,6 +1,7 @@
-# TODO - is there a better way to describe this?
-artifactType: application/vnd.gguf
 artifacts:
-  # 4-bit quantized version of instructlab/merlinite-7b-lab
   - source: https://huggingface.co/instructlab/merlinite-7b-lab-GGUF/resolve/4bb27da133fc4888d687ab731ac7faf0ed804c6d/merlinite-7b-lab-Q4_K_M.gguf
-    mediaType: application/octet-stream
+    filename: merlinite-7b-lab-Q4_K_M.gguf
+    type: application/vnd.gguf
+  - source: https://huggingface.co/front/assets/huggingface_logo-noborder.svg
+    filename: huggingface.svg
+    type: image/svg+xml

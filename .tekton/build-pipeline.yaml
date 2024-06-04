@@ -3,42 +3,6 @@ kind: Pipeline
 metadata:
   name: build-pipeline
 spec:
-  finally:
-    - name: show-sbom
-      params:
-        - name: IMAGE_URL
-          value: $(tasks.build-container.results.IMAGE_URL)
-      taskRef:
-        params:
-          - name: name
-            value: show-sbom
-          - name: bundle
-            value: quay.io/redhat-appstudio-tekton-catalog/task-show-sbom:0.1@sha256:1f1504c5d8b135864111a993ac6f9ab1212907fa0c609223714cdd7bd825e2ca
-          - name: kind
-            value: task
-        resolver: bundles
-    - name: show-summary
-      params:
-        - name: pipelinerun-name
-          value: $(context.pipelineRun.name)
-        - name: git-url
-          value: $(tasks.clone-repository.results.url)?rev=$(tasks.clone-repository.results.commit)
-        - name: image-url
-          value: $(params.output-image)
-        - name: build-task-status
-          value: $(tasks.build-container.status)
-      taskRef:
-        params:
-          - name: name
-            value: summary
-          - name: bundle
-            value: quay.io/redhat-appstudio-tekton-catalog/task-summary:0.2@sha256:c718319bd57c4f0ab1843cf98d813d0a26a73e0c8ce66218079c3c865508b0fb
-          - name: kind
-            value: task
-        resolver: bundles
-      workspaces:
-        - name: workspace
-          workspace: workspace
   params:
     - description: Source Repository URL
       name: git-url
@@ -92,19 +56,16 @@ spec:
   results:
     - description: ""
       name: IMAGE_URL
-      value: $(tasks.build-container.results.IMAGE_URL)
+      value: $(tasks.oci-copy.results.IMAGE_URL)
     - description: ""
       name: IMAGE_DIGEST
-      value: $(tasks.build-container.results.IMAGE_DIGEST)
+      value: $(tasks.oci-copy.results.IMAGE_DIGEST)
     - description: ""
       name: CHAINS-GIT_URL
       value: $(tasks.clone-repository.results.url)
     - description: ""
       name: CHAINS-GIT_COMMIT
       value: $(tasks.clone-repository.results.commit)
-    - description: ""
-      name: JAVA_COMMUNITY_DEPENDENCIES
-      value: $(tasks.build-container.results.JAVA_COMMUNITY_DEPENDENCIES)
   tasks:
     - name: init
       params:
@@ -175,35 +136,18 @@ spec:
           workspace: workspace
         - name: git-basic-auth
           workspace: git-auth
-    - name: build-container
+    - name: oci-copy
       params:
         - name: IMAGE
           value: $(params.output-image)
-        - name: DOCKERFILE
-          value: $(params.dockerfile)
-        - name: CONTEXT
-          value: $(params.path-context)
-        - name: HERMETIC
-          value: $(params.hermetic)
-        - name: PREFETCH_INPUT
-          value: $(params.prefetch-input)
+        - name: OCI_COPY_FILE
+          value: $(params.oci_copy_file)
         - name: IMAGE_EXPIRES_AFTER
           value: $(params.image-expires-after)
         - name: COMMIT_SHA
           value: $(tasks.clone-repository.results.commit)
-        - name: BUILD_ARGS_FILE
-          value: $(params.build-args-file)
       runAfter:
         - prefetch-dependencies
-      taskRef:
-        params:
-          - name: name
-            value: buildah
-          - name: bundle
-            value: quay.io/redhat-appstudio-tekton-catalog/task-buildah:0.1@sha256:13447a7b6a20e51875124c3510a4b6e86119f7b3ba89e2c997e0befefefb65f4
-          - name: kind
-            value: task
-        resolver: bundles
       when:
         - input: $(tasks.init.results.build)
           operator: in
@@ -212,171 +156,161 @@ spec:
       workspaces:
         - name: source
           workspace: workspace
-    - name: build-source-image
-      params:
-        - name: BINARY_IMAGE
-          value: $(params.output-image)
-        - name: BASE_IMAGES
-          value: $(tasks.build-container.results.BASE_IMAGES_DIGESTS)
-      runAfter:
-        - build-container
-      taskRef:
+      taskSpec:
+        description: |-
+          TODO
         params:
-          - name: name
-            value: source-build
-          - name: bundle
-            value: quay.io/redhat-appstudio-tekton-catalog/task-source-build:0.1@sha256:1a976a35adee9163e455d0c5aee5d9bf9cb3c6a770656ae347558f8c54977709
-          - name: kind
-            value: task
-        resolver: bundles
-      when:
-        - input: $(tasks.init.results.build)
-          operator: in
-          values:
-            - "true"
-        - input: $(params.build-source-image)
-          operator: in
-          values:
-            - "true"
-      workspaces:
-        - name: workspace
-          workspace: workspace
-    - name: deprecated-base-image-check
-      params:
-        - name: BASE_IMAGES_DIGESTS
-          value: $(tasks.build-container.results.BASE_IMAGES_DIGESTS)
-        - name: IMAGE_URL
-          value: $(tasks.build-container.results.IMAGE_URL)
-        - name: IMAGE_DIGEST
-          value: $(tasks.build-container.results.IMAGE_DIGEST)
-      runAfter:
-        - build-container
-      taskRef:
-        params:
-          - name: name
-            value: deprecated-image-check
-          - name: bundle
-            value: quay.io/redhat-appstudio-tekton-catalog/task-deprecated-image-check:0.4@sha256:3793fbf59e7dadff9d1f7e7ea4cc430c69a2de620b20c7fd69d71bdd5f6c4a60
-          - name: kind
-            value: task
-        resolver: bundles
-      when:
-        - input: $(params.skip-checks)
-          operator: in
-          values:
-            - "false"
-    - name: clair-scan
-      params:
-        - name: image-digest
-          value: $(tasks.build-container.results.IMAGE_DIGEST)
-        - name: image-url
-          value: $(tasks.build-container.results.IMAGE_URL)
-      runAfter:
-        - build-container
-      taskRef:
-        params:
-          - name: name
-            value: clair-scan
-          - name: bundle
-            value: quay.io/redhat-appstudio-tekton-catalog/task-clair-scan:0.1@sha256:44d0df70080e082e72d2694b14130ff512e5e7f2611190161a9b016b4df9fb22
-          - name: kind
-            value: task
-        resolver: bundles
-      when:
-        - input: $(params.skip-checks)
-          operator: in
-          values:
-            - "false"
-    - name: ecosystem-cert-preflight-checks
-      params:
-        - name: image-url
-          value: $(tasks.build-container.results.IMAGE_URL)
-      runAfter:
-        - build-container
-      taskRef:
-        params:
-          - name: name
-            value: ecosystem-cert-preflight-checks
-          - name: bundle
-            value: quay.io/redhat-appstudio-tekton-catalog/task-ecosystem-cert-preflight-checks:0.1@sha256:b6c1276b983d7ec6f8cf250056e904887f519bb6e54d538525f6314b681bd728
-          - name: kind
-            value: task
-        resolver: bundles
-      when:
-        - input: $(params.skip-checks)
-          operator: in
-          values:
-            - "false"
-    - name: sast-snyk-check
-      runAfter:
-        - clone-repository
-      taskRef:
-        params:
-          - name: name
-            value: sast-snyk-check
-          - name: bundle
-            value: quay.io/redhat-appstudio-tekton-catalog/task-sast-snyk-check:0.1@sha256:242acc527a06a11fac9dd6524467f62f3a086c186c5f885973e5780a04d4289c
-          - name: kind
-            value: task
-        resolver: bundles
-      when:
-        - input: $(params.skip-checks)
-          operator: in
-          values:
-            - "false"
-      workspaces:
-        - name: workspace
-          workspace: workspace
-    - name: clamav-scan
-      params:
-        - name: image-digest
-          value: $(tasks.build-container.results.IMAGE_DIGEST)
-        - name: image-url
-          value: $(tasks.build-container.results.IMAGE_URL)
-      runAfter:
-        - build-container
-      taskRef:
-        params:
-          - name: name
-            value: clamav-scan
-          - name: bundle
-            value: quay.io/redhat-appstudio-tekton-catalog/task-clamav-scan:0.1@sha256:5dbe6c646c3502ddc7fbe6016b8584bed6ce3ab7028b0c405ebaabc7e6e9e64c
-          - name: kind
-            value: task
-        resolver: bundles
-      when:
-        - input: $(params.skip-checks)
-          operator: in
-          values:
-            - "false"
-    - name: sbom-json-check
-      params:
-        - name: IMAGE_URL
-          value: $(tasks.build-container.results.IMAGE_URL)
-        - name: IMAGE_DIGEST
-          value: $(tasks.build-container.results.IMAGE_DIGEST)
-      runAfter:
-        - build-container
-      taskRef:
-        params:
-          - name: name
-            value: sbom-json-check
-          - name: bundle
-            value: quay.io/redhat-appstudio-tekton-catalog/task-sbom-json-check:0.1@sha256:f9cc253c3a07594bfb51e09c78b46598591cb353e19b16ef514f8312a8b0bada
-          - name: kind
-            value: task
-        resolver: bundles
-      when:
-        - input: $(params.skip-checks)
-          operator: in
-          values:
-            - "false"
+          - description: Reference of the image we will push
+            name: IMAGE
+            type: string
+          - default: ./oci.yaml
+            description: Path to the oci copy file.
+            name: OCI_COPY_FILE
+            type: string
+          - default: "true"
+            description: Verify the TLS on the registry endpoint (for push/pull to a non-TLS registry)
+            name: TLSVERIFY
+            type: string
+          - default: ""
+            description: Delete image tag after specified time. Empty means to keep the image tag. Time values could be something like 1h, 2d, 3w for hours, days, and weeks, respectively.
+            name: IMAGE_EXPIRES_AFTER
+            type: string
+          - default: ""
+            description: The configuration is driven by this commit.
+            name: COMMIT_SHA
+            type: string
+        results:
+          - description: Digest of the artifact just pushed
+            name: IMAGE_DIGEST
+          - description: Repository where the artifact was pushed
+            name: IMAGE_URL
+        stepTemplate:
+          env:
+            - name: OCI_COPY_FILE
+              value: $(params.OCI_COPY_FILE)
+            - name: IMAGE
+              value: $(params.IMAGE)
+            - name: TLSVERIFY
+              value: $(params.TLSVERIFY)
+            - name: IMAGE_EXPIRES_AFTER
+              value: $(params.IMAGE_EXPIRES_AFTER)
+          volumeMounts:
+            - mountPath: "/var/workdir"
+              name: workdir
+        steps:
+          - name: prepare
+            image: quay.io/konflux-ci/yq:latest@sha256:974dea6375ee9df561ffd3baf994db2b61777a71f3bcf0050c5dca91ac9b3430
+            script: |
+              set -eu
+              set -o pipefail
+
+              SOURCE_CODE_DIR=source
+              oci_copy_file_path="$(pwd)/$SOURCE_CODE_DIR/$OCI_COPY_FILE"
+
+              mkdir -p /var/workdir/vars/
+
+              for entry in $(cat $oci_copy_file_path | yq '.artifacts[] | @json | @base64'); do
+                entry=$(echo $entry | base64 -d)
+                source=$(echo $entry | yq .source)
+                filename=$(echo $entry | yq .filename)
+                artifact_type=$(echo $entry | yq .type)
+
+                echo "declare OCI_SOURCE=${source}" > /var/workdir/vars/$filename
+                echo "declare OCI_FILENAME=${filename}" >> /var/workdir/vars/$filename
+                echo "declare OCI_ARTIFACT_TYPE=${artifact_type}" >> /var/workdir/vars/$filename
+
+                echo "Wrote /var/workdir/vars/$filename with contents:"
+                cat /var/workdir/vars/$filename
+              done
+            workingDir: $(workspaces.source.path)
+          - name: oci-copy
+            image: quay.io/containers/buildah:v1.35@sha256:fd6966a137e485fd887498ec7625df4392514a37d78b3020f6309fe5a2e75992
+
+            computeResources:
+              limits:
+                memory: 4Gi
+              requests:
+                cpu: 250m
+                memory: 512Mi
+            securityContext:
+              capabilities:
+                add:
+                  - SETFCAP
+            script: |
+              set -eu
+              set -o pipefail
+
+              buildah manifest create $IMAGE
+
+              for varfile in /var/workdir/vars/*; do
+                echo "Reading $varfile"
+                source $varfile
+
+                echo "Downloading $OCI_SOURCE to $OCI_FILENAME"
+                curl --silent --show-error --location $OCI_SOURCE -o $OCI_FILENAME
+
+                echo "Building manifest of type $OCI_ARTIFACT_TYPE from $OCI_FILENAME"
+                buildah manifest add $IMAGE --artifact --artifact-type $OCI_ARTIFACT_TYPE $OCI_FILENAME
+              done
+
+              echo "Pushing conents to $IMAGE"
+              buildah manifest push \
+                  --digestfile $(workspaces.source.path)/image-digest \
+                  --authfile $HOME/.docker/config.json \
+                  --all \
+                  $IMAGE
+
+              cat "$(workspaces.source.path)"/image-digest | tee $(results.IMAGE_DIGEST.path)
+              echo -n "$IMAGE" | tee $(results.IMAGE_URL.path)
+            volumeMounts:
+              - mountPath: /var/lib/containers
+                name: varlibcontainers
+            workingDir: $(workspaces.source.path)
+          - image: quay.io/konflux-ci/yq:latest@sha256:974dea6375ee9df561ffd3baf994db2b61777a71f3bcf0050c5dca91ac9b3430
+            name: sbom-generate
+            script: |
+              yq -o json e -n '.components = []' > sbom-cyclonedx.json
+
+              for varfile in /var/workdir/vars/*; do
+                echo "Reading $varfile"
+                source $varfile
+
+                purl="pkg:generic/${OCI_FILENAME}?download_url=${OCI_SOURCE}"
+
+                echo "Recording purl $purl"
+                yq -oj -i '.components += [ {"purl": "'$purl'"} ]' sbom-cyclonedx.json
+              done
+            workingDir: $(workspaces.source.path)
+          - name: upload-sbom
+            image: quay.io/redhat-appstudio/cosign:v2.1.1@sha256:c883d6f8d39148f2cea71bff4622d196d89df3e510f36c140c097b932f0dd5d5
+            args:
+              - attach
+              - sbom
+              - --sbom
+              - sbom-cyclonedx.json
+              - --type
+              - cyclonedx
+              - $(params.IMAGE)
+            workingDir: $(workspaces.source.path)
+
+        volumes:
+          - emptyDir: {}
+            name: varlibcontainers
+          - emptyDir: {}
+            name: workdir
+          - name: etc-pki-entitlement
+            secret:
+              optional: true
+              secretName: $(params.ENTITLEMENT_SECRET)
+        workspaces:
+          - description: Workspace containing the source code to build.
+            name: source
     - name: apply-tags
       params:
         - name: IMAGE
-          value: $(tasks.build-container.results.IMAGE_URL)
+          value: $(tasks.oci-copy.results.IMAGE_URL)
       runAfter:
-        - build-container
+        - oci-copy
       taskRef:
         params:
           - name: name
