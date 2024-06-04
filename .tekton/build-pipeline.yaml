@@ -274,7 +274,15 @@ spec:
           - image: quay.io/konflux-ci/yq:latest@sha256:974dea6375ee9df561ffd3baf994db2b61777a71f3bcf0050c5dca91ac9b3430
             name: sbom-generate
             script: |
-              yq -o json e -n '.components = []' > sbom-cyclonedx.json
+              cat >sbom-cyclonedx.json <<EOL
+              {
+                  "$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.5",
+                  "version": 1,
+                  "components": []
+              }
+              EOL
 
               for varfile in /var/workdir/vars/*; do
                 echo "Reading $varfile"
