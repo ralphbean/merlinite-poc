@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: build-pipeline
+  name: copy-pipeline
 spec:
   params:
     - description: Source Repository URL
@@ -14,45 +14,13 @@ spec:
     - description: Fully Qualified Output Image
       name: output-image
       type: string
-    - default: .
-      description: Path to the source code of an application's component from where to build image.
-      name: path-context
-      type: string
-    - default: Containerfile
-      description: Path to the Dockerfile inside the context specified by parameter path-context
-      name: dockerfile
-      type: string
-    - default: "false"
-      description: Force rebuild image
-      name: rebuild
-      type: string
-    - default: "false"
-      description: Skip checks against built image
-      name: skip-checks
-      type: string
-    - default: "false"
-      description: Execute the build with network isolation
-      name: hermetic
-      type: string
     - default: ""
       description: Build dependencies to be prefetched by Cachi2
       name: prefetch-input
       type: string
-    - default: "false"
-      description: Java build
-      name: java
-      type: string
     - default: ""
       description: Image tag expiration time, time values could be something like 1h, 2d, 3w for hours, days, and weeks, respectively.
       name: image-expires-after
-    - default: "false"
-      description: Build a source image.
-      name: build-source-image
-      type: string
-    - default: ""
-      description: Path to a file with build arguments which will be passed to podman during build
-      name: build-args-file
-      type: string
   results:
     - description: ""
       name: IMAGE_URL

@@ -25,7 +25,7 @@ spec:
     - name: revision
       value: '{{revision}}'
   pipelineRef:
-    name: build-pipeline
+    name: copy-pipeline
   taskRunTemplate: {}
   workspaces:
     - name: workspace
