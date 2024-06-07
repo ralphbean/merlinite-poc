@@ -259,7 +259,7 @@ spec:
                 purl="pkg:generic/${OCI_FILENAME}?download_url=${OCI_SOURCE}&checksum=sha256:${OCI_ARTIFACT_DIGEST}"
 
                 echo "Recording purl $purl"
-                yq -oj -i '.components += [ {"purl": "'$purl'", "type": "file", "name": "'$OCI_FILENAME'"} ]' sbom-cyclonedx.json
+                yq -oj -i '.components += [ {"purl": "'$purl'", "type": "file", "name": "'$OCI_FILENAME'", "hashes": [{"alg": "SHA-256", "content": "'$OCI_ARTIFACT_DIGEST'"}], "externalReferences": [{"type": "distribution", "url": "'$OCI_SOURCE'"}]} ]' sbom-cyclonedx.json
               done
             workingDir: $(workspaces.source.path)
           - name: upload-sbom
