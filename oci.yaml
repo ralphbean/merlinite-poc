@@ -1,3 +1,4 @@
+artifact_type: application/x-mlmodel
 artifacts:
   - source: https://huggingface.co/instructlab/merlinite-7b-lab-GGUF/resolve/4bb27da133fc4888d687ab731ac7faf0ed804c6d/merlinite-7b-lab-Q4_K_M.gguf
     filename: merlinite-7b-lab-Q4_K_M.gguf
