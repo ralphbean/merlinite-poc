@@ -11,40 +11,54 @@ You can examine the output builds at quay.io/redhat-user-workloads/rhel-ai-poc-t
 There are two files stored in the registry: the gguf model, and the huggingface logo. There's no point in distributing the huggingface logo like this - it's just there to demonstrate what distributing more than one file looks like.
 
 ```bash
-❯ cosign tree quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:99232c2355efd09ef5d0f4aca4fe3e22a7849a92
-📦 Supply Chain Security Related artifacts for an image: quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:99232c2355efd09ef5d0f4aca4fe3e22a7849a92
-└── 💾 Attestations for an image tag: quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:sha256-57d759c7b811e575d6cbfe08b233b16e55c4e894e6faa20c8e7ed5d9bf3c9d8c.att
-   └── 🍒 sha256:411d171c8330666195b60fed9c879973ce7eb7a2c59ed3df4b51ed0f89a87287
-└── 🔐 Signatures for an image tag: quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:sha256-57d759c7b811e575d6cbfe08b233b16e55c4e894e6faa20c8e7ed5d9bf3c9d8c.sig
-   └── 🍒 sha256:eaf6f72cfc268c7a05398fcf10a5846b50674efe9005dc03995ae419bd436e9b
-└── 📦 SBOMs for an image tag: quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:sha256-57d759c7b811e575d6cbfe08b233b16e55c4e894e6faa20c8e7ed5d9bf3c9d8c.sbom
-   └── 🍒 sha256:e8ce2ea22b156a7e53114a5ff622a7cecc717ff781596c788fc97cbf93587ba5
+❯ cosign tree quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:82c0d0ab382f17a8567da12f34640626d207c868
+📦 Supply Chain Security Related artifacts for an image: quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:82c0d0ab382f17a8567da12f34640626d207c868
+└── 💾 Attestations for an image tag: quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:sha256-e6072aa3763c0b88b33084f001cafa5ef5bac11058fd27dbca7a3e5a0bfba91f.att
+   └── 🍒 sha256:7f9659bad9776e16ca2a7c5d439f84a2494d4dc24aa6786b2335df680cdc9192
+└── 🔐 Signatures for an image tag: quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:sha256-e6072aa3763c0b88b33084f001cafa5ef5bac11058fd27dbca7a3e5a0bfba91f.sig
+   └── 🍒 sha256:48bc14bdf03968c83c61842b7bf81604a9fef7c8f8165a4abe6b0077ef97fe44
+└── 📦 SBOMs for an image tag: quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:sha256-e6072aa3763c0b88b33084f001cafa5ef5bac11058fd27dbca7a3e5a0bfba91f.sbom
+   └── 🍒 sha256:8f33660ec9145ef91369707c7420c7974bd0e13dcc170820fb3f3e93838f9a86
 ```
 
 ```bash
-❯ skopeo inspect --raw docker://quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:99232c2355efd09ef5d0f4aca4fe3e22a7849a92 | jq
+❯ skopeo inspect --raw docker://quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:82c0d0ab382f17a8567da12f34640626d207c868 | jq
 {
   "schemaVersion": 2,
-  "mediaType": "application/vnd.oci.image.index.v1+json",
-  "manifests": [
+  "mediaType": "application/vnd.oci.image.manifest.v1+json",
+  "artifactType": "application/x-mlmodel",
+  "config": {
+    "mediaType": "application/vnd.oci.empty.v1+json",
+    "digest": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "size": 2,
+    "data": "e30="
+  },
+  "layers": [
     {
-      "mediaType": "application/vnd.oci.image.manifest.v1+json",
-      "digest": "sha256:9eded4b501f27ede70107f46941f43cd6d4d4fb00859a8b1b49d512a1dbf859d",
-      "size": 475,
-      "artifactType": "image/svg+xml"
+      "mediaType": "image/svg+xml",
+      "digest": "sha256:3613c73f07ccae19118bfe6d2f8cd127183d08cf99468a708e090953e116ed0a",
+      "size": 4634,
+      "annotations": {
+        "org.opencontainers.image.title": "huggingface.svg"
+      }
     },
     {
-      "mediaType": "application/vnd.oci.image.manifest.v1+json",
-      "digest": "sha256:ce1195719ed41d4820ea5cabc672c352b22786d471a271780522f2ad3ccddf4a",
-      "size": 512,
-      "artifactType": "application/vnd.gguf"
+      "mediaType": "application/vnd.gguf",
+      "digest": "sha256:9ca044d727db34750e1aeb04e3b18c3cf4a8c064a9ac96cf00448c506631d16c",
+      "size": 4368484992,
+      "annotations": {
+        "org.opencontainers.image.title": "merlinite-7b-lab-Q4_K_M.gguf"
+      }
     }
-  ]
+  ],
+  "annotations": {
+    "org.opencontainers.image.created": "2024-06-24T17:00:49Z"
+  }
 }
 ```
 
 ```bash
-❯ oras pull quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:99232c2355efd09ef5d0f4aca4fe3e22a7849a92
+❯ oras pull quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:82c0d0ab382f17a8567da12f34640626d207c868
 ✓ Pulled      merlinite-7b-lab-Q4_K_M.gguf                                     4.07/4.07 GB 100.00%  2m31s
   └─ sha256:9ca044d727db34750e1aeb04e3b18c3cf4a8c064a9ac96cf00448c506631d16c
 ✓ Pulled      huggingface.svg                                                  4.53/4.53 kB 100.00%   14ms
@@ -58,12 +72,12 @@ There are two files stored in the registry: the gguf model, and the huggingface 
 ```
 
 ```bash
-❯ ls                                         
+❯ ls
 huggingface.svg  merlinite-7b-lab-Q4_K_M.gguf
 ```
 
 ```bash
-❯ cosign download sbom quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:99232c2355efd09ef5d0f4aca4fe3e22a7849a92 
+❯ cosign download sbom quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:82c0d0ab382f17a8567da12f34640626d207c868
 {
   "$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
   "bomFormat": "CycloneDX",
