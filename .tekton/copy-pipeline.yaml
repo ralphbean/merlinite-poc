@@ -79,31 +79,6 @@ spec:
           workspace: workspace
         - name: basic-auth
           workspace: git-auth
-    - name: prefetch-dependencies
-      params:
-        - name: input
-          value: $(params.prefetch-input)
-      runAfter:
-        - clone-repository
-      taskRef:
-        params:
-          - name: name
-            value: prefetch-dependencies
-          - name: bundle
-            value: quay.io/redhat-appstudio-tekton-catalog/task-prefetch-dependencies:0.1@sha256:0285e38b5b88552ef3d760db83e6a0ce91d8d308b48890885f51b13571a4e057
-          - name: kind
-            value: task
-        resolver: bundles
-      when:
-        - input: $(params.prefetch-input)
-          operator: notin
-          values:
-            - ""
-      workspaces:
-        - name: source
-          workspace: workspace
-        - name: git-basic-auth
-          workspace: git-auth
     - name: oci-copy
       params:
         - name: IMAGE
@@ -115,7 +90,16 @@ spec:
         - name: COMMIT_SHA
           value: $(tasks.clone-repository.results.commit)
       runAfter:
-        - prefetch-dependencies
+        - clone-repository
+      taskRef:
+        params:
+          - name: name
+            value: oci-copy
+          - name: bundle
+            value: quay.io/konflux-ci/tekton-catalog/task-oci-copy:0.1@sha256:3b72388c4ae0955d6a2ab8ef7a2195e205a8cfd9db7371f1bc83d8febb9a8bf9
+          - name: kind
+            value: task
+        resolver: bundles
       when:
         - input: $(tasks.init.results.build)
           operator: in
@@ -124,168 +108,6 @@ spec:
       workspaces:
         - name: source
           workspace: workspace
-      taskSpec:
-        description: |-
-          TODO
-        params:
-          - description: Reference of the image we will push
-            name: IMAGE
-            type: string
-          - default: ./oci.yaml
-            description: Path to the oci copy file.
-            name: OCI_COPY_FILE
-            type: string
-          - default: "true"
-            description: Verify the TLS on the registry endpoint (for push/pull to a non-TLS registry)
-            name: TLSVERIFY
-            type: string
-          - default: ""
-            description: Delete image tag after specified time. Empty means to keep the image tag. Time values could be something like 1h, 2d, 3w for hours, days, and weeks, respectively.
-            name: IMAGE_EXPIRES_AFTER
-            type: string
-          - default: ""
-            description: The configuration is driven by this commit.
-            name: COMMIT_SHA
-            type: string
-        results:
-          - description: Digest of the artifact just pushed
-            name: IMAGE_DIGEST
-          - description: Repository where the artifact was pushed
-            name: IMAGE_URL
-        stepTemplate:
-          env:
-            - name: OCI_COPY_FILE
-              value: $(params.OCI_COPY_FILE)
-            - name: IMAGE
-              value: $(params.IMAGE)
-            - name: TLSVERIFY
-              value: $(params.TLSVERIFY)
-            - name: IMAGE_EXPIRES_AFTER
-              value: $(params.IMAGE_EXPIRES_AFTER)
-          volumeMounts:
-            - mountPath: "/var/workdir"
-              name: workdir
-        steps:
-          - name: prepare
-            image: quay.io/konflux-ci/yq:latest@sha256:974dea6375ee9df561ffd3baf994db2b61777a71f3bcf0050c5dca91ac9b3430
-            script: |
-              set -eu
-              set -o pipefail
-
-              SOURCE_CODE_DIR=source
-              oci_copy_file_path="$(pwd)/$SOURCE_CODE_DIR/$OCI_COPY_FILE"
-
-              mkdir -p /var/workdir/vars/
-
-              for entry in $(cat $oci_copy_file_path | yq '.artifacts[] | @json | @base64'); do
-                entry=$(echo $entry | base64 -d)
-                source=$(echo $entry | yq .source)
-                filename=$(echo $entry | yq .filename)
-                artifact_type=$(echo $entry | yq .type)
-                artifact_digest=$(echo $entry | yq .sha256sum)
-
-                echo "declare OCI_SOURCE=${source}" > /var/workdir/vars/$filename
-                echo "declare OCI_FILENAME=${filename}" >> /var/workdir/vars/$filename
-                echo "declare OCI_ARTIFACT_TYPE=${artifact_type}" >> /var/workdir/vars/$filename
-                echo "declare OCI_ARTIFACT_DIGEST=${artifact_digest}" >> /var/workdir/vars/$filename
-
-                echo "Wrote /var/workdir/vars/$filename with contents:"
-                cat /var/workdir/vars/$filename
-              done
-            workingDir: $(workspaces.source.path)
-          - name: oci-copy
-            image: quay.io/containers/buildah:v1.35.4@sha256:eb9d9665f80f7f9619df810dafedc850cdcbad83ab88a4ecd81738214cad5bf2
-
-            computeResources:
-              limits:
-                memory: 4Gi
-              requests:
-                cpu: 250m
-                memory: 512Mi
-            securityContext:
-              capabilities:
-                add:
-                  - SETFCAP
-            script: |
-              set -eu
-              set -o pipefail
-
-              buildah manifest create $IMAGE
-
-              for varfile in /var/workdir/vars/*; do
-                echo "Reading $varfile"
-                source $varfile
-
-                echo "Downloading $OCI_SOURCE to $OCI_FILENAME"
-                curl --silent --show-error --location $OCI_SOURCE -o $OCI_FILENAME
-
-                echo "Confirming that digest of $OCI_FILENAME matches expected $OCI_ARTIFACT_DIGEST"
-                echo "$OCI_ARTIFACT_DIGEST $OCI_FILENAME" | sha256sum --check
-
-                echo "Building manifest of type $OCI_ARTIFACT_TYPE from $OCI_FILENAME"
-                buildah manifest add $IMAGE --artifact --artifact-type $OCI_ARTIFACT_TYPE $OCI_FILENAME
-              done
-
-              echo "Pushing conents to $IMAGE"
-              buildah manifest push \
-                  --digestfile $(workspaces.source.path)/image-digest \
-                  --authfile $HOME/.docker/config.json \
-                  --all \
-                  $IMAGE
-
-              cat "$(workspaces.source.path)"/image-digest | tee $(results.IMAGE_DIGEST.path)
-              echo -n "$IMAGE" | tee $(results.IMAGE_URL.path)
-            volumeMounts:
-              - mountPath: /var/lib/containers
-                name: varlibcontainers
-            workingDir: $(workspaces.source.path)
-          - image: quay.io/konflux-ci/yq:latest@sha256:974dea6375ee9df561ffd3baf994db2b61777a71f3bcf0050c5dca91ac9b3430
-            name: sbom-generate
-            script: |
-              cat >sbom-cyclonedx.json <<EOL
-              {
-                  "\$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
-                  "bomFormat": "CycloneDX",
-                  "specVersion": "1.5",
-                  "version": 1,
-                  "components": []
-              }
-              EOL
-
-              for varfile in /var/workdir/vars/*; do
-                echo "Reading $varfile"
-                source $varfile
-
-                purl="pkg:generic/${OCI_FILENAME}?download_url=${OCI_SOURCE}&checksum=sha256:${OCI_ARTIFACT_DIGEST}"
-
-                echo "Recording purl $purl"
-                yq -oj -i '.components += [ {"purl": "'$purl'", "type": "file", "name": "'$OCI_FILENAME'", "hashes": [{"alg": "SHA-256", "content": "'$OCI_ARTIFACT_DIGEST'"}], "externalReferences": [{"type": "distribution", "url": "'$OCI_SOURCE'"}]} ]' sbom-cyclonedx.json
-              done
-            workingDir: $(workspaces.source.path)
-          - name: upload-sbom
-            image: quay.io/redhat-appstudio/cosign:v2.1.1@sha256:c883d6f8d39148f2cea71bff4622d196d89df3e510f36c140c097b932f0dd5d5
-            args:
-              - attach
-              - sbom
-              - --sbom
-              - sbom-cyclonedx.json
-              - --type
-              - cyclonedx
-              - $(params.IMAGE)
-            workingDir: $(workspaces.source.path)
-
-        volumes:
-          - emptyDir: {}
-            name: varlibcontainers
-          - emptyDir: {}
-            name: workdir
-          - name: etc-pki-entitlement
-            secret:
-              optional: true
-              secretName: $(params.ENTITLEMENT_SECRET)
-        workspaces:
-          - description: Workspace containing the source code to build.
-            name: source
     - name: apply-tags
       params:
         - name: IMAGE
