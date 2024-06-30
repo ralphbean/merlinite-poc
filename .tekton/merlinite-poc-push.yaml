@@ -17,7 +17,7 @@ metadata:
 spec:
   params:
     - name: oci_copy_file
-      value: oci.yaml
+      value: oci-copy.yaml
     - name: git-url
       value: '{{source_url}}'
     - name: output-image
