@@ -6,7 +6,7 @@ The configuration of what to pull and upload is driven by `oci.yaml`.
 
 The process is achieved by the tekton pipeline in `.tekton/`.
 
-You can examine the output builds at quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:99232c2355efd09ef5d0f4aca4fe3e22a7849a92.
+You can examine the output builds at quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:82c0d0ab382f17a8567da12f34640626d207c868
 
 There are two files stored in the registry: the gguf model, and the huggingface logo. There's no point in distributing the huggingface logo like this - it's just there to demonstrate what distributing more than one file looks like.
 
