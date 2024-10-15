@@ -96,7 +96,7 @@ spec:
           - name: name
             value: oci-copy
           - name: bundle
-            value: quay.io/konflux-ci/tekton-catalog/task-oci-copy:0.1@sha256:acef9b7d66798f16d2a2eaddeea3a9abdedc6e2503b12dc16fe839a492a5eb69
+            value: quay.io/rbean/task-oci-copy@sha256:554c794b3a67bddc2d3957964b729e0e93c8eb0e29d5eec571ae1ac403355690
           - name: kind
             value: task
         resolver: bundles
