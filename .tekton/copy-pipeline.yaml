@@ -35,31 +35,12 @@ spec:
       name: CHAINS-GIT_COMMIT
       value: $(tasks.clone-repository.results.commit)
   tasks:
-    - name: init
-      params:
-        - name: image-url
-          value: $(params.output-image)
-        - name: rebuild
-          value: $(params.rebuild)
-        - name: skip-checks
-          value: $(params.skip-checks)
-      taskRef:
-        params:
-          - name: name
-            value: init
-          - name: bundle
-            value: quay.io/redhat-appstudio-tekton-catalog/task-init:0.2@sha256:596b7c11572bb94eb67d9ffb4375068426e2a8249ff2792ce04ad2a4bc593a63
-          - name: kind
-            value: task
-        resolver: bundles
     - name: clone-repository
       params:
         - name: url
           value: $(params.git-url)
         - name: revision
           value: $(params.revision)
-      runAfter:
-        - init
       taskRef:
         params:
           - name: name
@@ -69,11 +50,6 @@ spec:
           - name: kind
             value: task
         resolver: bundles
-      when:
-        - input: $(tasks.init.results.build)
-          operator: in
-          values:
-            - "true"
       workspaces:
         - name: output
           workspace: workspace
@@ -100,11 +76,6 @@ spec:
           - name: kind
             value: task
         resolver: bundles
-      when:
-        - input: $(tasks.init.results.build)
-          operator: in
-          values:
-            - "true"
       workspaces:
         - name: source
           workspace: workspace
