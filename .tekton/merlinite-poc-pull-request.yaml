@@ -7,7 +7,8 @@ metadata:
     build.appstudio.redhat.com/pull_request_number: '{{pull_request_number}}'
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
     pipelinesascode.tekton.dev/max-keep-runs: "3"
-    pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && target_branch == "main"
+    pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && target_branch
+      == "main"
   creationTimestamp: null
   labels:
     appstudio.openshift.io/application: models
@@ -17,32 +18,33 @@ metadata:
   namespace: rhel-ai-poc-tenant
 spec:
   params:
-    - name: oci_copy_file
-      value: oci-copy.yaml
-    - name: git-url
-      value: '{{source_url}}'
-    - name: image-expires-after
-      value: 5d
-    - name: output-image
-      value: quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:on-pr-{{revision}}
-    - name: revision
-      value: '{{revision}}'
+  - name: oci_copy_file
+    value: oci-copy.yaml
+  - name: git-url
+    value: '{{source_url}}'
+  - name: image-expires-after
+    value: 5d
+  - name: output-image
+    value: quay.io/redhat-user-workloads/rhel-ai-poc-tenant/models/merlinite-poc:on-pr-{{revision}}
+  - name: revision
+    value: '{{revision}}'
   pipelineRef:
     name: copy-pipeline
-  taskRunTemplate: {}
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-merlinite-poc
   workspaces:
-    - name: workspace
-      volumeClaimTemplate:
-        metadata:
-          creationTimestamp: null
-        spec:
-          accessModes:
-            - ReadWriteOnce
-          resources:
-            requests:
-              storage: 20Gi
-        status: {}
-    - name: git-auth
-      secret:
-        secretName: '{{ git_auth_secret }}'
+  - name: workspace
+    volumeClaimTemplate:
+      metadata:
+        creationTimestamp: null
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+      status: {}
+  - name: git-auth
+    secret:
+      secretName: '{{ git_auth_secret }}'
 status: {}
